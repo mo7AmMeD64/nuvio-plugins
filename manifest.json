@@ -5,15 +5,23 @@
     {
       "id": "cinemabox",
       "name": "CinemaBox",
-      "description": "Cinema Box (cinema.albox.co) — movies & series with Arabic subtitles, MP4 480p/720p/1080p (~4s)",
-      "version": "1.0",
+      "description": "Cinema Box (cinema.albox.co) — movies & series, Arabic subtitles, split-season auto-matching, MP4 480p/720p/1080p (~4s)",
+      "version": "1.1",
       "author": "mo7AmMeD64",
-      "supportedTypes": ["movie", "tv"],
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
       "filename": "providers/cinemabox.js",
       "enabled": true,
-      "formats": ["mp4"],
+      "formats": [
+        "mp4"
+      ],
       "logo": "https://www.google.com/s2/favicons?domain=cinema.albox.co&sz=256",
-      "contentLanguage": ["en", "ar"]
+      "contentLanguage": [
+        "en",
+        "ar"
+      ]
     }
   ]
 }
