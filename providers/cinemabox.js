@@ -59,8 +59,11 @@ async function findShow(title, year, wantSeries) {
     if (results.length === 0) break;
 
     const typed = results.filter(r => (r.type || "").toUpperCase() === wantType);
-    const sameEra = typed.filter(r => !year || !r.year || Math.abs(r.year - year) <= 1);
-    const pool = sameEra.length > 0 ? sameEra : typed;
+    // sites often carry broken years (0/1900) — those never get excluded, but real
+    // mismatched years do (else "Money Heist" matches the "Phenomenon" documentary)
+    const pool = typed.filter(r =>
+      !r.year || r.year <= 1900 || !year || Math.abs(r.year - year) <= 1
+    );
 
     const exact = pool.find(r => norm(r.title) === norm(title));
     if (exact) return exact;
@@ -70,6 +73,8 @@ async function findShow(title, year, wantSeries) {
     );
     if (close) return close;
 
+    if (pool.length === 0) continue;
+
     if ((d.pagination || {}).total_pages && page < d.pagination.total_pages) continue;
   }
   return null;
@@ -77,12 +82,14 @@ async function findShow(title, year, wantSeries) {
 
 async function showDetails(showId) {
   const d = await api(`shows/shows/dynamic/${showId}`);
+  const sections = d.sections || [];
   return {
     info: d.post_info || {},
-    seasonCards: (d.sections || [])
+    seasonCards: sections
       .filter(s => s.section_type === "normalPoster")
       .flatMap(s => s.data || [])
-      .filter(c => (c.type || "").toLowerCase() === "season")
+      .filter(c => (c.type || "").toLowerCase() === "season"),
+    episodesSection: (((sections.find(s => s.section_type === "episodes") || {}).data) || [])
   };
 }
 
@@ -98,8 +105,13 @@ async function seasonEpisodes(showId, seasonId) {
 // vs TMDB (e.g. Mushoku Tensei: site cards [1,2,2,4,5] vs TMDB S1/S2/S3).
 // Resolve by episode-count match against TMDB when the number alone is ambiguous.
 async function resolveSeason(showId, seasonNum, tmdbId) {
-  const { info, seasonCards } = await showDetails(showId);
+  const { info, seasonCards, episodesSection } = await showDetails(showId);
   log(`seasons on site: [${seasonCards.map(c => c.title).join(",")}] wanted: ${seasonNum}`);
+
+  // single-season shows have no season cards — episodes are in the details response
+  if (seasonCards.length === 0) {
+    return { seasonId: info.current_season_id || null, cards: episodesSection };
+  }
 
   const numbered = seasonCards.filter(c => num(c.title) === seasonNum);
   if (numbered.length === 1) return { seasonId: numbered[0].id, cards: await seasonEpisodes(showId, numbered[0].id) };
