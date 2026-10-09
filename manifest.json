@@ -1,0 +1,19 @@
+{
+  "name": "mo7AmMeD64's Nuvio Plugins",
+  "version": "1.0",
+  "scrapers": [
+    {
+      "id": "cinemabox",
+      "name": "CinemaBox",
+      "description": "Cinema Box (cinema.albox.co) — movies & series with Arabic subtitles, MP4 480p/720p/1080p (~4s)",
+      "version": "1.0",
+      "author": "mo7AmMeD64",
+      "supportedTypes": ["movie", "tv"],
+      "filename": "providers/cinemabox.js",
+      "enabled": true,
+      "formats": ["mp4"],
+      "logo": "https://www.google.com/s2/favicons?domain=cinema.albox.co&sz=256",
+      "contentLanguage": ["en", "ar"]
+    }
+  ]
+}
