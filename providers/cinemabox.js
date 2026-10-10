@@ -179,7 +179,11 @@ async function getStreams(tmdbId, mediaType = "movie", seasonNum = null, episode
 
     const streamTitle = `${title}${isMovie ? (year ? ` (${year})` : "") : ` S${String(s).padStart(2, "0")}E${String(e).padStart(2, "0")}`}`;
 
-    if (isMovie) return await playerStreams(show.id, streamTitle);
+    // movies play via post_info.episode_id (usually != show id, e.g. Reze Arc)
+    if (isMovie) {
+      const { info } = await showDetails(show.id);
+      return await playerStreams(String(info.episode_id || show.id), streamTitle);
+    }
 
     const { seasonId, cards } = await resolveSeason(show.id, s, tmdbId);
     if (!seasonId) { log(`season ${s} not found`); return []; }
