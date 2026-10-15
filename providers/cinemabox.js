@@ -32,7 +32,7 @@ async function api(path) {
 
 async function tmdbTitles(tmdbId, mediaType) {
   const type = mediaType === "tv" ? "tv" : "movie";
-  const res = await fetch(`${TMDB}/${type}/${tmdbId}?api_key=${TMDB_KEY}&append_to_response=alternative_titles`, { headers: HEADERS });
+  const res = await fetch(`${TMDB}/${type}/${tmdbId}?api_key=${TMDB_KEY}&append_to_response=alternative_titles`);
   const d = await res.json();
   const main = d.name || d.title || "";
   const alt = ((d.alternative_titles || {}).results || []).map(t => t.title);
@@ -44,7 +44,7 @@ async function tmdbTitles(tmdbId, mediaType) {
 
 async function tmdbEpisodeCount(tmdbId, seasonNum) {
   try {
-    const res = await fetch(`${TMDB}/tv/${tmdbId}/season/${seasonNum}?api_key=${TMDB_KEY}`, { headers: HEADERS });
+    const res = await fetch(`${TMDB}/tv/${tmdbId}/season/${seasonNum}?api_key=${TMDB_KEY}`);
     const d = await res.json();
     return (d.episodes || []).length || null;
   } catch { return null; }
