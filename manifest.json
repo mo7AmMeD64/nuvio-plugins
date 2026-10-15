@@ -1,6 +1,6 @@
 {
   "name": "mo7AmMeD64's Nuvio Plugins",
-  "version": "1.0",
+  "version": "1.1",
   "scrapers": [
     {
       "id": "cinemabox",
@@ -21,6 +21,28 @@
       "contentLanguage": [
         "en",
         "ar"
+      ]
+    },
+    {
+      "id": "oscartv",
+      "name": "Oscar TV",
+      "description": "Oscar TV (ostv-11-11.xyz) — movies, series & anime, direct HLS 360p-1080p with anti-bot signed API (~5s)",
+      "version": "1.0",
+      "author": "mo7AmMeD64",
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
+      "filename": "providers/oscartv.js",
+      "enabled": true,
+      "formats": [
+        "m3u8",
+        "mp4"
+      ],
+      "logo": "https://www.google.com/s2/favicons?domain=ostv-11-11.xyz&sz=256",
+      "contentLanguage": [
+        "ar",
+        "en"
       ]
     }
   ]
