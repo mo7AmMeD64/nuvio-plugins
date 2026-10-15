@@ -27,7 +27,7 @@
       "id": "oscartv",
       "name": "Oscar TV",
       "description": "Oscar TV (ostv-11-11.xyz) — movies, series & anime, direct HLS 360p-1080p with anti-bot signed API (~5s)",
-      "version": "1.0",
+      "version": "1.1",
       "author": "mo7AmMeD64",
       "supportedTypes": [
         "movie",

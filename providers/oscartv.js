@@ -40,6 +40,14 @@ async function tmdbTitles(tmdbId, mediaType) {
   };
 }
 
+async function tmdbSeasonCount(tmdbId, seasonNum) {
+  try {
+    const res = await fetch(`${TMDB}/tv/${tmdbId}/season/${seasonNum}?api_key=${TMDB_KEY}`);
+    const d = await res.json();
+    return (d.episodes || []).length || null;
+  } catch { return null; }
+}
+
 const norm = s => (s || "").toLowerCase().replace(/[^a-z0-9\u0600-\u06FF]+/g, "").trim();
 
 async function search(kind, query) {
@@ -85,9 +93,99 @@ async function findShow(titles) {
       let items = [];
       try { items = await search(kind, t); } catch { continue; }
       const hit = exactMatch(items, t) || closeMatch(items, t);
-      if (hit) return { kind, item: hit };
+      if (hit) return { kind, item: hit, items };
     }
   }
+  return null;
+}
+
+// The site splits anime into separate entries per part ("Mushoku Tensei III",
+// "... Part 2") while TMDB keeps one series with seasons. Resolve the wanted
+// TMDB season by episode-count math over the sibling entries, in air order.
+const ROMAN = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10, xi: 11, xii: 12 };
+const PERIOD_ORDER = { winter: 0, spring: 1, summer: 2, fall: 3 };
+
+function stemOf(t) {
+  return norm(String(t || "")
+    .replace(/\b(X{0,3}(?:IX|IV|V?I{1,3}))\b/g, " ")
+    .replace(/\b(?:season|part|pt)\s*[0-9ivx]+\b/gi, " ")
+    .replace(/\bS\d{1,2}\b/g, " "));
+}
+
+function entrySeasonNum(t) {
+  const s = String(t || "");
+  let m = s.match(/\b(X{0,3}(?:IX|IV|V?I{1,3}))\b/);
+  if (m && ROMAN[m[1].toLowerCase()]) return ROMAN[m[1].toLowerCase()];
+  m = s.match(/\b(?:season|part|pt)\s*([0-9]+)\b/i) || s.match(/(?:الموسم|الجزء)\s*([٠-٩0-9]+)/);
+  if (m) {
+    const digits = String(m[1]).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+    return parseInt(digits, 10);
+  }
+  return null;
+}
+
+// walk the entry's internal seasons to find which one holds global episode epNum
+function pickInternal(info, epNum) {
+  const seasons = (info.seasons || []).slice().sort((a, b) => (a.season_number || 0) - (b.season_number || 0));
+  for (const s of seasons) {
+    const cnt = s.episodes_count || 0;
+    if (epNum <= cnt) return { seasonId: s.season_id != null ? s.season_id : s.id, epNum };
+    epNum -= cnt;
+  }
+  return null;
+}
+
+async function resolveSplitAnime(items, matched, tmdbId, seasonNum, episodeNum) {
+  const stem = stemOf(matched.title_en || matched.title_ar);
+  const cands = items
+    .filter(i => stemOf(i.title_en || i.title_ar) === stem)
+    .filter((i, idx, a) => a.findIndex(x => x.id === i.id) === idx);
+  if (cands.length === 0) return null;
+
+  const infos = [];
+  for (const en of cands) {
+    try {
+      const d = (await call(`api/anime/show.php?id=${en.id}`)).data || {};
+      const seasons = d.seasons || [];
+      const total = seasons.reduce((a, s) => a + (s.episodes_count || 0), 0);
+      if (!total) continue;
+      infos.push({
+        en,
+        seasons,
+        total,
+        year: parseInt(String(seasons[0].season_year || d.release_year || 0), 10),
+        period: PERIOD_ORDER[seasons[0].season_period] != null ? PERIOD_ORDER[seasons[0].season_period] : 4,
+      });
+    } catch { continue; }
+  }
+  if (infos.length === 0) return null;
+  infos.sort((a, b) => (a.year - b.year) || (a.period - b.period));
+
+  const want = await tmdbSeasonCount(tmdbId, seasonNum);
+  log(`split-anime: ${infos.length} siblings [${infos.map(i => `${i.total}@${i.year}`).join(", ")}] want=${want} for S${seasonNum}E${episodeNum}`);
+  if (want) {
+    // 1) a single entry that IS the whole season
+    const hit = infos.find(i => i.total === want);
+    if (hit) return pickInternal(hit, episodeNum);
+    // 2) consecutive entries (in air order) that together form the season
+    let acc = 0;
+    const group = [];
+    for (const i of infos) {
+      group.push(i); acc += i.total;
+      if (acc >= want) break;
+    }
+    if (acc === want) {
+      let ep = episodeNum;
+      for (const g of group) {
+        if (ep <= g.total) return pickInternal(g, ep);
+        ep -= g.total;
+      }
+    }
+  }
+  // 3) last resort: an entry whose title carries the season number
+  const numHit = infos.find(i => entrySeasonNum(i.en.title_en || i.en.title_ar) === seasonNum);
+  if (numHit) { log(`split-anime: fell back to number-in-title entry`); return pickInternal(numHit, episodeNum); }
+  log(`split-anime: no entry matched TMDB S${seasonNum}`);
   return null;
 }
 
@@ -130,17 +228,36 @@ async function toStreams(links, streamTitle) {
   return out;
 }
 
-async function episodeStreams(isAnime, showId, seasonNum, episodeNum, streamTitle) {
+async function episodeStreams(isAnime, showId, seasonNum, episodeNum, streamTitle, items, matched, tmdbId) {
   const base = isAnime ? "api/anime" : "api/series";
   const d = (await call(`${base}/show.php?id=${showId}`)).data || {};
   const seasons = d.seasons || [];
   let season = seasons.find(s => Number(s.season_number) === seasonNum);
+
+  const split = isAnime && items && matched;
+  // episode beyond this season's range -> it lives in a sibling part-entry
+  if (season && split && season.episodes_count && episodeNum > season.episodes_count) {
+    log(`season ${seasonNum} here has only ${season.episodes_count} eps, want E${episodeNum} -> sibling part-entries`);
+    season = null;
+  }
+
+  // anime split into separate per-part entries -> resolve across siblings instead
+  if (!season && split) {
+    const r = await resolveSplitAnime(items, matched, tmdbId, seasonNum, episodeNum);
+    if (r) return episodeByNumber(isAnime, r.seasonId, r.epNum, streamTitle);
+    return [];
+  }
+
   if (!season && seasons.length === 1) season = seasons[0]; // single-season shows often have no number
   if (!season) return [];
   const sid = season.season_id != null ? season.season_id : season.id;
+  return episodeByNumber(isAnime, sid, episodeNum, streamTitle);
+}
+
+async function episodeByNumber(isAnime, seasonId, episodeNum, streamTitle) {
   const epPath = isAnime
-    ? `api/anime/episodes/?season_id=${sid}`
-    : `api/episodes/?season_id=${sid}`;
+    ? `api/anime/episodes/?season_id=${seasonId}`
+    : `api/episodes/?season_id=${seasonId}`;
   const eps = ((await call(epPath)).data) || [];
   const ep = eps.find(x => Number(x.episode_number) === episodeNum) || eps[episodeNum - 1];
   if (!ep) return [];
@@ -173,7 +290,7 @@ async function getStreams(tmdbId, mediaType = "movie", seasonNum = null, episode
     const found = await findShow(titles);
     if (!found) { log("not found on Oscar TV"); return []; }
     log(`matched: "${found.item.title_en || found.item.title_ar}" (id=${found.item.id}, ${found.kind})`);
-    return episodeStreams(found.kind === "anime", found.item.id, s, e, streamTitle);
+    return episodeStreams(found.kind === "anime", found.item.id, s, e, streamTitle, found.items, found.item, tmdbId);
   } catch (err) {
     log(`error: ${err.message}`);
     return [];
