@@ -6,7 +6,7 @@
       "id": "cinemabox",
       "name": "CinemaBox",
       "description": "Cinema Box (cinema.albox.co) — movies & series, Arabic subtitles, split-season auto-matching, MP4 480p/720p/1080p (~5s)",
-      "version": "1.4",
+      "version": "1.5",
       "author": "mo7AmMeD64",
       "supportedTypes": [
         "movie",
