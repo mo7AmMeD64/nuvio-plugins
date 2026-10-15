@@ -4,10 +4,15 @@ const TMDB_KEY = "1c29a5198ee1854bd5eb45dbe8d17d92";
 const TMDB = "https://api.themoviedb.org/3";
 const API = "https://cinema.albox.co/api/v4";
 
+// per-install random device id — sharing one real ID gets it (and that person's app) banned
+const DEVICE_ID = Array.from({ length: 16 }, () =>
+  "0123456789abcdef"[Math.floor(Math.random() * 16)]
+).join("");
+
 const HEADERS = {
   "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 14; 23043RP34G Build/UKQ1.240624.001)",
   "Accept-Language": "en",
-  "Device-Id": "a1b2c3d4e5f60718",
+  "Device-Id": DEVICE_ID,
   "Device-Model": "Xiaomi 23043RP34G",
   "Device-OS-Version": "14",
   "Device-Store": "googleplay",
