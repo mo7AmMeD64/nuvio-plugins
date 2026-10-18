@@ -17,6 +17,7 @@ Nuvio local scrapers (JavaScript) for the [Nuvio](https://github.com/nuvio-app/n
 | --- | --- | --- |
 | CinemaBox | Movies & Series (cinema.albox.co) — Arabic subs | 1080p / 720p / 480p MP4 |
 | Oscar TV | Movies, Series & Anime (ostv-11-11.xyz) | 1080p / 720p / 480p / 360p HLS |
+| AnimeWitcher | Anime Movies & Series (animewitcher.com) — Arabic subs | 1080p / 720p / 480p MP4 |
 
 ## How it works
 
