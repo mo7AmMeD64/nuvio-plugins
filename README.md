@@ -20,6 +20,13 @@ Nuvio local scrapers (JavaScript) for the [Nuvio](https://github.com/nuvio-app/n
 | AnimeWitcher | Anime Movies & Series (animewitcher.com) — Arabic subs | 1080p / 720p / 480p MP4 |
 | Cima Cloud | Movies, Series & Anime (cima-cloud.com) — full Arabic catalog | 1080p / 720p / 480p HLS & MP4 |
 
+##visitors
+<div align="center">
+  <a href="https://count.getloli.com/">
+    <img src="https://count.getloli.com/@mo7AmMeD64-nuvio-plugins?name=mo7AmMeD64-nuvio-plugins&theme=rule34&padding=8&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="Visitor count"/>
+  </a>
+</div>
+
 ## How it works
 
 Nuvio gives the scraper a TMDB id; the scraper maps it to the site by
