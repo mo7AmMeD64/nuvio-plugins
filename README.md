@@ -20,6 +20,13 @@ Nuvio local scrapers (JavaScript) for the [Nuvio](https://github.com/nuvio-app/n
 | AnimeWitcher | Anime Movies & Series (animewitcher.com) — Arabic subs | 1080p / 720p / 480p MP4 |
 | Cima Cloud | Movies, Series & Anime (cima-cloud.com) — full Arabic catalog | 1080p / 720p / 480p HLS & MP4 |
 
+
+<h2>💝 ادعمني</h2>
+<p>دعمك يجعلني أستمر في تقديم إضافات أكثر وأكثر 🙏</p>
+<p>
+<a href="https://creators.sa/x3onq">https://creators.sa/x3onq</a>
+</p>
+
 ## Visitors 👀
 <div align="center">
   <a href="https://count.getloli.com/">
