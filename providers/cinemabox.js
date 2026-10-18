@@ -1,10 +1,7 @@
-// CinemaBox Scraper for Nuvio
-
 const TMDB_KEY = "1c29a5198ee1854bd5eb45dbe8d17d92";
 const TMDB = "https://api.themoviedb.org/3";
 const API = "https://cinema.albox.co/api/v4";
 
-// per-install random device id — sharing one real ID gets it (and that person's app) banned
 const DEVICE_ID = Array.from({ length: 16 }, () =>
   "0123456789abcdef"[Math.floor(Math.random() * 16)]
 ).join("");
@@ -64,8 +61,6 @@ async function findShow(title, year, wantSeries) {
     if (results.length === 0) break;
 
     const typed = results.filter(r => (r.type || "").toUpperCase() === wantType);
-    // sites often carry broken years (0/1900) — those never get excluded, but real
-    // mismatched years do (else "Money Heist" matches the "Phenomenon" documentary)
     const pool = typed.filter(r =>
       !r.year || r.year <= 1900 || !year || Math.abs(r.year - year) <= 1
     );
@@ -106,14 +101,10 @@ async function seasonEpisodes(showId, seasonId) {
   } catch { return []; }
 }
 
-// The site splits anime into parts, so season numbers can be duplicated or shifted
-// vs TMDB (e.g. Mushoku Tensei: site cards [1,2,2,4,5] vs TMDB S1/S2/S3).
-// Resolve by episode-count match against TMDB when the number alone is ambiguous.
 async function resolveSeason(showId, seasonNum, tmdbId) {
   const { info, seasonCards, episodesSection } = await showDetails(showId);
   log(`seasons on site: [${seasonCards.map(c => c.title).join(",")}] wanted: ${seasonNum}`);
 
-  // single-season shows have no season cards — episodes are in the details response
   if (seasonCards.length === 0) {
     return { seasonId: info.current_season_id || null, cards: episodesSection };
   }
@@ -184,7 +175,6 @@ async function getStreams(tmdbId, mediaType = "movie", seasonNum = null, episode
 
     const streamTitle = `${title}${isMovie ? (year ? ` (${year})` : "") : ` S${String(s).padStart(2, "0")}E${String(e).padStart(2, "0")}`}`;
 
-    // movies play via post_info.episode_id (usually != show id, e.g. Reze Arc)
     if (isMovie) {
       const { info } = await showDetails(show.id);
       return await playerStreams(String(info.episode_id || show.id), streamTitle);

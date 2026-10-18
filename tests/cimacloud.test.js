@@ -1,6 +1,3 @@
-// Smoke test for the CimaCloud scraper: node tests/cimacloud.test.js
-// Hits the live API end to end (attestation crypto + encrypted server lists),
-// so a failure can also mean the app rotated its keys or the site changed hosts.
 const assert = require("assert");
 const { getStreams } = require("../providers/cimacloud.js");
 

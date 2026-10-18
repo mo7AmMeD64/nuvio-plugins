@@ -1,18 +1,3 @@
-// CimaCloud Scraper for Nuvio
-//
-// Port of the reverse-engineered (v1.3 app) CloudStream provider of the same name.
-// What makes this one unusual:
-//   * the API domain rotates — it is fetched live from the app's remote config
-//   * details/servers need a "firebase_id" attestation token: a fixed JSON payload
-//     encrypted with a fresh AES-256-GCM key that is itself RSA-wrapped with the
-//     app's embedded public key (pure JS here: Hermes has no WebCrypto, and the
-//     app's key is PKCS#1 v1.5, which WebCrypto cannot do anyway)
-//   * server lists come back as Base64 AES-256-CBC, keyed by our random device id
-// Server links resolve through: direct media, Google Photos share pages,
-// *.developer-pro.workers.dev, the developer's extractor.php, or a generic
-// JWPlayer scrape (incl. p.a.c.k.e.d). Whatever is left over gets skipped —
-// Nuvio has no built-in extractor zoo like CloudStream does.
-
 const TMDB_KEY = "1c29a5198ee1854bd5eb45dbe8d17d92";
 const TMDB = "https://api.themoviedb.org/3";
 
@@ -25,14 +10,11 @@ const UA_OKHTTP = "okhttp/4.10.0";
 const UA_CHROME = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36";
 const UA_MOBILE = "Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36";
 
-// ---------------------------------------------------------------- attestation
-
 const ATTEST_APP_ID = "21406135";
 const ATTEST_CERT_PATH =
   "021bb8f6029e4e63e4b5b0ff922788b4fe24739e261e637dddf70bf95e0aacd7" +
   "|/data/app/com.app.cimacloud-1/base.apk";
 
-// modulus of the RSA-2048 key baked into the app (SPKI base64 -> hex)
 const RSA_N_HEX =
   "c033d8129a446f7c72b3f47df7ece6656e78be171021c57eebe06d1c8fd099be" +
   "08d0cda1c347d0f5fccb63f46128cdf7cae38e64d02e969ab807227b6f9e7a7e" +
@@ -48,16 +30,12 @@ const MPD_SUFFIX = "=mm,dash-vm-vf,dr.sdr,sdrCodec.vp9.h264?alr=true&mpd_version
 const CF_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 const HEX_CHARS = "0123456789abcdef";
 
-// hosts handled by the developer's own extractor.php (vidtube = TB, fasel = FS, ...);
-// uqload/streamwish/dwapp answer there with uq_/sw_/dw_ errors, i.e. they are known too
 const EXTRACTOR_DOMAINS = [
   "vidtube", "fasel", "ukrcdn", "upns", "uns.bio", "videoland",
   "rpmhub", "lalalala", "web51018x", "web71512x", "uqload", "streamwish", "dwapp",
 ];
 
 const log = (...a) => console.log("[CimaCloud]", ...a);
-
-// ---------------------------------------------------------------- crypto (pure JS)
 
 const B64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -132,8 +110,6 @@ const randomBytes = (n) => {
   return a;
 };
 
-// --- md5 (needed for the CBC key/iv derivation)
-
 const MD5_T = [];
 for (let i = 0; i < 64; i++) MD5_T[i] = (Math.abs(Math.sin(i + 1)) * 0x100000000) | 0;
 const MD5_S = [
@@ -184,8 +160,6 @@ function md5Hex(text) {
   });
   return toHex(out);
 }
-
-// --- aes-256 (block + cbc decrypt + gcm encrypt)
 
 const SBOX = (() => {
   const hex =
@@ -320,7 +294,6 @@ function ghashMul(x, h) {
   return z;
 }
 
-/** AES-256-GCM encrypt with a 12-byte IV; returns ciphertext || 16-byte tag. */
 function aesGcmEncrypt(key, iv, plain) {
   const w = aesKeySchedule(key);
   const h = aesEncryptBlock(new Uint8Array(16), w);
@@ -357,15 +330,13 @@ function aesGcmEncrypt(key, iv, plain) {
   return out;
 }
 
-// --- rsa pkcs#1 v1.5 (Hermes has BigInt)
-
 function rsaEncryptPkcs1(msg, modulusHex, exponent) {
   const k = modulusHex.length / 2;
   if (msg.length > k - 11) return null;
   const em = new Uint8Array(k);
   em[0] = 0; em[1] = 2;
   const psLen = k - 3 - msg.length;
-  for (let i = 0; i < psLen; i++) em[2 + i] = 1 + Math.floor(Math.random() * 255); // non-zero padding
+  for (let i = 0; i < psLen; i++) em[2 + i] = 1 + Math.floor(Math.random() * 255);
   em[2 + psLen] = 0;
   em.set(msg, 3 + psLen);
 
@@ -388,19 +359,14 @@ function rsaEncryptPkcs1(msg, modulusHex, exponent) {
   return out;
 }
 
-// ---------------------------------------------------------------- app tokens
-
-// random "device id" — plays the role of android_id in the app's crypto
 const DEVICE_ID = Array.from({ length: 16 }, () => HEX_CHARS[Math.floor(Math.random() * 16)]).join("");
 
-// the app obfuscates this string as two XORed byte arrays; same here
 const KEY_BASE = (() => {
   const h = [0x1d, 0x51, 0x45, 0x47, 0x04, 0x5d, 0x08, 0x23, 0x6a, 0x7b, 0x1d, 0x1d, 0x46, 0x5e, 0x20, 0x7e];
   const i = [0x5a, 0x3c, 0x71, 0x2e, 0x68, 0x1d, 0x4f, 0x13];
   return h.map((b, k) => String.fromCharCode(b ^ i[k % i.length])).join("");
 })();
 
-/** the app's attestation token — must be fresh for every request */
 function makeFirebaseId() {
   const payload =
     `{"a":"${ATTEST_APP_ID}","b":"${ATTEST_CERT_PATH}","c":"false","d":"empty","e":"empty",` +
@@ -412,11 +378,9 @@ function makeFirebaseId() {
   return b64Encode(rsaEncryptPkcs1(aesKey, RSA_N_HEX, RSA_E)) + "." + b64Encode(iv) + "." + b64Encode(sealed);
 }
 
-/** 15 random alphanumerics + the device id (exactly how the app builds it) */
 const makeCloudflareId = () =>
   Array.from({ length: 15 }, () => CF_ALPHABET[Math.floor(Math.random() * 62)]).join("") + DEVICE_ID;
 
-/** the servers list is Base64(AES-256-CBC) keyed from our device id */
 function decryptServers(b64Body) {
   try {
     const key = utf8Encode(md5Hex(KEY_BASE + DEVICE_ID));
@@ -431,11 +395,8 @@ function decryptServers(b64Body) {
   }
 }
 
-// ---------------------------------------------------------------- api
-
 let apiBaseCache = null;
 
-/** the API domain rotates — it comes from the app's own remote config */
 async function apiBase() {
   if (apiBaseCache) return apiBaseCache;
   try {
@@ -472,15 +433,12 @@ async function apiPostForm(path, form) {
   try { return await res.json(); } catch (e) { return null; }
 }
 
-// ---------------------------------------------------------------- tmdb + matching
-
 async function tmdbTitles(tmdbId, mediaType) {
   const type = mediaType === "tv" ? "tv" : "movie";
   const res = await fetch(`${TMDB}/${type}/${tmdbId}?api_key=${TMDB_KEY}&append_to_response=alternative_titles,translations`);
   const d = await res.json();
   const main = d.name || d.title || "";
   const alt = ((d.alternative_titles || {}).results || []).map((t) => t.title);
-  // the catalog is Arabic — translated titles (e.g. the Arabic name of a remake) make the difference
   const tr = ((d.translations || {}).translations || []).map((t) => (t.data || {}).title || (t.data || {}).name || "");
   return {
     titles: [...new Set([main, ...alt, ...tr].map((s) => (s || "").trim()).filter(Boolean))],
@@ -498,7 +456,6 @@ const itemYear = (it) => {
   return parseInt(String(it.release_date || "").slice(0, 4), 10) || null;
 };
 
-/** site years are unreliable (0/random) — only a real mismatch disqualifies a candidate */
 function yearOk(it, year) {
   const y = itemYear(it);
   return !year || !y || y <= 1900 || Math.abs(y - year) <= 1;
@@ -507,7 +464,6 @@ function yearOk(it, year) {
 const typeOk = (it, isMovie) =>
   !!it && (isMovie ? ["movie"] : ["serie", "series"]).includes(String(it.type || "").toLowerCase());
 
-/** search TMDB titles (incl. Arabic translations) until a year-correct match shows up */
 async function findItem(titles, year, isMovie) {
   const pool = [];
   const seen = new Set();
@@ -541,8 +497,6 @@ async function findItem(titles, year, isMovie) {
   return null;
 }
 
-// ---------------------------------------------------------------- resolvers
-
 const hostOf = (url) => {
   const m = String(url).match(/^https?:\/\/([^/:?#]+)/i);
   return m ? m[1].toLowerCase() : null;
@@ -568,40 +522,33 @@ function mkStream(label, url, streamTitle, headers, quality) {
 
 const isDirect = (url) => /\.(mp4|m3u8|mpd)$/.test(String(url).split("?")[0].toLowerCase());
 
-/** dispatch one server link to the right resolver */
 async function resolveServer(link, streamTitle, out) {
   const host = hostOf(link) || "";
   const label = serverLabel(link);
 
-  // 1) direct media files
   if (isDirect(link)) {
     out.push(mkStream(label, link, streamTitle, { "User-Agent": UA_CHROME }));
     return;
   }
 
-  // 2) Google Photos (plain share link or the "aminegoogle" wrapper around one)
   const photos = gphotosUrl(link);
   if (photos) {
     await resolveGooglePhotos(photos, streamTitle, out);
     return;
   }
 
-  // 3) the developer's Cloudflare Workers resolvers
   if (host.endsWith("developer-pro.workers.dev")) {
     await resolveWorkers(link, streamTitle, out);
     return;
   }
 
-  // 4) hosts the developer's extractor.php handles (vidtube = TB, fasel = FS, ...)
   if (EXTRACTOR_DOMAINS.some((d) => host.includes(d))) {
     if (await resolveViaExtractorPhp(link, streamTitle, out)) return;
   }
 
-  // 5) everything else: generic JWPlayer scrape (works for many of the long-tail hosts)
   await resolveJwEmbed(link, label, streamTitle, out);
 }
 
-/** hrrejhp.com/aminegoogle/googlefinal.php?url=<photos link> -> the inner photos link */
 function gphotosUrl(link) {
   const host = hostOf(link);
   if (!host) return null;
@@ -619,7 +566,6 @@ function gphotosUrl(link) {
   return null;
 }
 
-/** Google Photos share page -> direct download + lh3 DASH manifest (as the app does) */
 async function resolveGooglePhotos(shareUrl, streamTitle, out) {
   let page;
   try {
@@ -649,7 +595,6 @@ async function resolveGooglePhotos(shareUrl, streamTitle, out) {
   return found;
 }
 
-/** *.developer-pro.workers.dev/get-links?id=... — returns links pointing at media */
 async function resolveWorkers(url, streamTitle, out) {
   let text;
   try {
@@ -685,7 +630,6 @@ async function resolveWorkers(url, streamTitle, out) {
   return found;
 }
 
-/** the developer's own extractor.php: labeled links + referer/origin */
 async function resolveViaExtractorPhp(link, streamTitle, out) {
   let res;
   try {
@@ -714,7 +658,6 @@ async function resolveViaExtractorPhp(link, streamTitle, out) {
 const SOURCES_REGEX = /sources\s*:\s*\[\s*\{\s*file\s*:\s*["']([^"']+)["']/;
 const FILE_REGEX = /["']?file["']?\s*:\s*["']([^"']+)["']/;
 
-/** JWPlayer-style embed page (plain sources:[{file}] or p.a.c.k.e.d eval()) */
 async function resolveJwEmbed(embedUrl, label, streamTitle, out) {
   const headers = { "User-Agent": UA_CHROME, Referer: embedUrl };
   const host = hostOf(embedUrl);
@@ -741,7 +684,6 @@ async function resolveJwEmbed(embedUrl, label, streamTitle, out) {
   return true;
 }
 
-/** p.a.c.k.e.d eval(function(p,a,c,k,e,d){...}) -> unpacked JS (no eval — Hermes forbids it) */
 function unpackPackedJs(page) {
   const evalMatch = page.match(/eval\s*\(\s*function\s*\([\s\S]*?\)\s*\{[\s\S]*?\}\s*\(([\s\S]*)\)\s*\)/);
   if (!evalMatch) return null;
@@ -765,13 +707,10 @@ function deobfuscate(p, a, c, k) {
   return p.replace(/\b\w+\b/g, (m) => (map[m] !== undefined ? map[m] : m));
 }
 
-// ---------------------------------------------------------------- servers
-
 async function fetchServerLinks(path) {
   const raw = (await apiGetRaw(path, { firebase_id: makeFirebaseId(), "cloudflare-id": makeCloudflareId() })).trim();
   const decrypted = decryptServers(raw);
   if (decrypted) return decrypted;
-  // the app also accepts a plain JSON reply as a fallback
   try {
     const json = JSON.parse(raw);
     if (json.status === true && Array.isArray(json.servers))
@@ -779,8 +718,6 @@ async function fetchServerLinks(path) {
   } catch (e) {}
   return null;
 }
-
-// ---------------------------------------------------------------- entry point
 
 async function getStreams(tmdbId, mediaType = "movie", seasonNum = null, episodeNum = null) {
   const isMovie = mediaType === "movie";
@@ -805,7 +742,7 @@ async function getStreams(tmdbId, mediaType = "movie", seasonNum = null, episode
       const eps = await apiGet(`series/${item.id}/episodes`);
       const seasons = (eps && eps.seasons) || [];
       let season = seasons.find((x) => String(x.season_number) === String(s));
-      if (!season && seasons.length === 1) season = seasons[0]; // continuous/anime shows
+      if (!season && seasons.length === 1) season = seasons[0];
       const list = season && Array.isArray(season.episodes) ? season.episodes : [];
       const ep = list.find((x) => num(x.title) === e) || list[e - 1];
       if (!ep || !ep.id) { log(`S${s}E${e} not found`); return []; }

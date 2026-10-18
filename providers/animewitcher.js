@@ -1,9 +1,3 @@
-// AnimeWitcher Scraper for Nuvio
-// Ported from Abodabodd's CloudStream provider. The site's app backend is
-// Algolia (search) + Firebase Firestore (episodes/servers); the same public
-// REST endpoints are used here, including the remote "serverWords" markers
-// that pull direct video links out of host pages without a plugin release.
-
 const TMDB_KEY = "1c29a5198ee1854bd5eb45dbe8d17d92";
 const TMDB = "https://api.themoviedb.org/3";
 const FIREBASE_PROJECT = "animewitcher-1c66d";
@@ -11,12 +5,10 @@ const FIREBASE_KEY = "AIzaSyAcbWRwfFNnCpoydDXlEALWnM_TYVcJOMU";
 const BROWSER_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
 
-// keys rotate (the shipped CloudStream build's are already stale); refresh from
-// the app's Firestore config and retry, same as the app does
 let ALGOLIA = { appId: "QVHT7NPEJG", apiKey: "ce13098070fa521b536571bafbcfc083" };
 
-const TYPE_SERIES = "\u0645\u0633\u0644\u0633\u0644"; // مسلسل
-const TYPE_MOVIE = "\u0641\u064a\u0644\u0645"; // فيلم
+const TYPE_SERIES = "\u0645\u0633\u0644\u0633\u0644";
+const TYPE_MOVIE = "\u0641\u064a\u0644\u0645";
 
 const log = (...a) => console.log("[AnimeWitcher]", ...a);
 
@@ -83,7 +75,6 @@ const norm = s => (s || "").toLowerCase().replace(/[^a-z0-9\u0600-\u06FF]+/g, ""
 
 const ROMAN = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10, xi: 11, xii: 12 };
 
-// strip season/part markers to compare "same show" titles
 function stemOf(t) {
   return norm(String(t || "")
     .replace(/\b(X{0,3}(?:IX|IV|V?I{1,3}))\b/g, " ")
@@ -92,7 +83,6 @@ function stemOf(t) {
     .replace(/\bS\d{1,2}\b/g, " "));
 }
 
-// season number carried by the title itself ("... II", "... 3rd Season", "... S3")
 function seasonOfName(t) {
   const s = String(t || "");
   let m = s.match(/\b(X{0,3}(?:IX|IV|V?I{1,3}))\b/);
@@ -109,7 +99,6 @@ function seasonOfName(t) {
 async function episodesOf(animePath) {
   const d = await firestore(`anime_list/${encodeURIComponent(animePath)}/episodes_summery/summery`);
   const values = d.fields?.episodes?.arrayValue?.values || [];
-  // some entries carry a "000" (الحلقة 0) special — it is not a real episode
   return values
     .map(v => {
       const id = v.mapValue?.fields?.doc_id?.stringValue;
@@ -160,12 +149,10 @@ async function serverWords(name) {
 
 async function resolveMediaFire(link) {
   const html = await fetch(link, { headers: { "User-Agent": BROWSER_UA } }).then(r => r.text());
-  // the download button href on /file/ pages is the direct CDN link
   return html.match(/href="(https:\/\/download[^"]*\.mediafire\.com\/[^"]+)"/)?.[1] || null;
 }
 
 function resolvePixeldrain(link) {
-  // og:video on /u/ pages is exactly the /api/file/ endpoint
   const m = link.match(/pixeldrain\.com\/u\/([A-Za-z0-9_-]+)/);
   return m ? `https://pixeldrain.com/api/file/${m[1]}` : null;
 }
@@ -174,8 +161,6 @@ async function resolveStreamtape(link) {
   const html = await fetch(link, { headers: { "User-Agent": BROWSER_UA } }).then(r => r.text());
   const m = html.match(/robotlink['"]\)\.innerHTML\s*=\s*'([^']*)'\s*\+\s*'([^']*)'/) ||
             html.match(/robotlink['"]\)\.innerHTML\s*=\s*'([^']+)'/);
-  // shortcut: streamtape's current markup; the site's ST files are all dead right
-  // now so this could not be checked live — re-verify when ST files come back
   if (!m) return null;
   const raw = (m[2] != null ? m[1] + m[2] : m[1]).replace(/&amp;/g, "&");
   return raw.startsWith("//") ? `https:${raw}` : raw;
@@ -225,16 +210,11 @@ async function resolveServer(server) {
   }
 }
 
-// The site splits seasons into separate entries ("... II", "... 2nd Season",
-// "... Part 2"), like most anime sites. Pick the entry (or consecutive group of
-// entries) whose episode counts add up to the TMDB season, then walk to the
-// requested episode.
 async function resolveEntry(anchor, hits, tmdbId, seasonNum, episodeNum, pathOf) {
   const stem = stemOf(anchor.name);
   const fam = hits.filter(h => h.name && (stemOf(h.name) === stem ||
     (norm(h.name).startsWith(stem) && seasonOfName(h.name) == null)));
 
-  // entries that name their season outright win; S1 also accepts unnumbered ones
   const bare = fam.filter(h => seasonOfName(h.name) == null);
   const explicit = fam.filter(h => seasonOfName(h.name) === seasonNum);
   const cands0 = explicit.length ? explicit : seasonNum === 1 ? bare : fam;
@@ -256,8 +236,6 @@ async function resolveEntry(anchor, hits, tmdbId, seasonNum, episodeNum, pathOf)
     return epObj ? { path: pathOf(m.h), ep: epObj.id } : null;
   };
 
-  // 1) a single entry that IS the whole season, by TMDB episode count;
-  //    same-count arcs (e.g. Kimetsu) are told apart by season air year
   const want = await tmdbSeason(tmdbId, seasonNum);
   const yearDist = m => (want.year ? Math.abs((parseInt(m.h.details?.year || "0", 10) || 0) - want.year) : 0);
   if (want.count) {
@@ -266,7 +244,6 @@ async function resolveEntry(anchor, hits, tmdbId, seasonNum, episodeNum, pathOf)
       const r = snap(matches[0], episodeNum);
       if (r) return r;
     }
-    // 2) consecutive entries (air order) that together form the season
     let acc = 0;
     const group = [];
     for (const m of metas) {
@@ -286,7 +263,6 @@ async function resolveEntry(anchor, hits, tmdbId, seasonNum, episodeNum, pathOf)
     }
   }
 
-  // 3) last resort: first entry that can hold the episode number
   const m = metas.find(x => x.eps.length >= episodeNum) || metas[0];
   return snap(m, episodeNum);
 }
@@ -330,7 +306,6 @@ async function getStreams(tmdbId, mediaType = "movie", seasonNum = null, episode
     if (!anchor) { log("not found on AnimeWitcher"); return []; }
     log(`matched: "${anchor.name}" (${anchor.details?.year || "?"})`);
 
-    // one more search under the site's own title to pull the whole season family
     if (!isMovie) {
       await collect(anchor.name);
       hits = [...pool.values()];
@@ -391,5 +366,3 @@ async function getStreams(tmdbId, mediaType = "movie", seasonNum = null, episode
 }
 
 module.exports = { getStreams };
-
-

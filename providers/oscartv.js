@@ -1,5 +1,3 @@
-// Oscar TV Scraper for Nuvio
-
 const TMDB_KEY = "1c29a5198ee1854bd5eb45dbe8d17d92";
 const TMDB = "https://api.themoviedb.org/3";
 const MAIN = "https://ostv-11-11.xyz";
@@ -10,7 +8,6 @@ const BROWSER_UA =
 
 const log = (...a) => console.log("[OscarTV]", ...a);
 
-// flech.tn computes fresh X-Iron-* headers per URL -> required for every API call
 async function call(path) {
   const res = await fetch(STEP1, {
     method: "POST",
@@ -76,7 +73,6 @@ async function findMovie(titles, year) {
     try { items = await search("movie", t); } catch { continue; }
     let hit = exactMatch(items, t) || closeMatch(items, t);
     if (!hit) continue;
-    // verify the year when the site has one — same-title remakes are common
     try {
       const d = (await call(`api/movies/show.php?id=${hit.id}`)).data || {};
       const y = parseInt(String(d.release_year || (d.release_date || "").slice(0, 4)), 10);
@@ -99,9 +95,6 @@ async function findShow(titles) {
   return null;
 }
 
-// The site splits anime into separate entries per part ("Mushoku Tensei III",
-// "... Part 2") while TMDB keeps one series with seasons. Resolve the wanted
-// TMDB season by episode-count math over the sibling entries, in air order.
 const ROMAN = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10, xi: 11, xii: 12 };
 const PERIOD_ORDER = { winter: 0, spring: 1, summer: 2, fall: 3 };
 
@@ -124,7 +117,6 @@ function entrySeasonNum(t) {
   return null;
 }
 
-// walk the entry's internal seasons to find which one holds global episode epNum
 function pickInternal(info, epNum) {
   const seasons = (info.seasons || []).slice().sort((a, b) => (a.season_number || 0) - (b.season_number || 0));
   for (const s of seasons) {
@@ -164,10 +156,8 @@ async function resolveSplitAnime(items, matched, tmdbId, seasonNum, episodeNum) 
   const want = await tmdbSeasonCount(tmdbId, seasonNum);
   log(`split-anime: ${infos.length} siblings [${infos.map(i => `${i.total}@${i.year}`).join(", ")}] want=${want} for S${seasonNum}E${episodeNum}`);
   if (want) {
-    // 1) a single entry that IS the whole season
     const hit = infos.find(i => i.total === want);
     if (hit) return pickInternal(hit, episodeNum);
-    // 2) consecutive entries (in air order) that together form the season
     let acc = 0;
     const group = [];
     for (const i of infos) {
@@ -182,14 +172,12 @@ async function resolveSplitAnime(items, matched, tmdbId, seasonNum, episodeNum) 
       }
     }
   }
-  // 3) last resort: an entry whose title carries the season number
   const numHit = infos.find(i => entrySeasonNum(i.en.title_en || i.en.title_ar) === seasonNum);
   if (numHit) { log(`split-anime: fell back to number-in-title entry`); return pickInternal(numHit, episodeNum); }
   log(`split-anime: no entry matched TMDB S${seasonNum}`);
   return null;
 }
 
-// cdn.mediaoscar.com redirects to a 1-min notice video without the deep_link cookie
 function playHeaders(deepLink) {
   const h = { "User-Agent": PLAY_UA };
   const m = String(deepLink || "").match(/cookies=([^&]+)/);
@@ -203,7 +191,6 @@ async function toStreams(links, streamTitle) {
   for (const l of (links || [])) {
     let url = l.url;
     if (!url || !/^https?:/.test(url)) continue;
-    // YNMov links are Yandex Disk wrapper pages -> resolve the iframe
     if (url.includes("newcdn.seriesmp4.com")) {
       try {
         const body = await fetch(url, { headers: { "User-Agent": PLAY_UA } }).then(r => r.text());
@@ -235,20 +222,18 @@ async function episodeStreams(isAnime, showId, seasonNum, episodeNum, streamTitl
   let season = seasons.find(s => Number(s.season_number) === seasonNum);
 
   const split = isAnime && items && matched;
-  // episode beyond this season's range -> it lives in a sibling part-entry
   if (season && split && season.episodes_count && episodeNum > season.episodes_count) {
     log(`season ${seasonNum} here has only ${season.episodes_count} eps, want E${episodeNum} -> sibling part-entries`);
     season = null;
   }
 
-  // anime split into separate per-part entries -> resolve across siblings instead
   if (!season && split) {
     const r = await resolveSplitAnime(items, matched, tmdbId, seasonNum, episodeNum);
     if (r) return episodeByNumber(isAnime, r.seasonId, r.epNum, streamTitle);
     return [];
   }
 
-  if (!season && seasons.length === 1) season = seasons[0]; // single-season shows often have no number
+  if (!season && seasons.length === 1) season = seasons[0];
   if (!season) return [];
   const sid = season.season_id != null ? season.season_id : season.id;
   return episodeByNumber(isAnime, sid, episodeNum, streamTitle);

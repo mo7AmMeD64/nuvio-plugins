@@ -1,5 +1,3 @@
-// Smoke test for the AnimeWitcher scraper: node tests/animewitcher.test.js
-// Hits the live site backend, so a failure can also mean the site's own files changed.
 const assert = require("assert");
 const { getStreams } = require("../providers/animewitcher.js");
 
