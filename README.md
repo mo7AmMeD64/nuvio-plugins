@@ -21,8 +21,8 @@ Nuvio local scrapers (JavaScript) for the [Nuvio](https://github.com/nuvio-app/n
 | Cima Cloud | Movies, Series & Anime (cima-cloud.com) — full Arabic catalog | 1080p / 720p / 480p HLS & MP4 |
 
 
-<h2>💝 ادعمني</h2>
-<p>دعمك يجعلني أستمر في تقديم إضافات أكثر وأكثر 🙏</p>
+<h2>support me </h2>
+<p>you can support me there 🙏</p>
 <p>
 <a href="https://creators.sa/x3onq">https://creators.sa/x3onq</a>
 </p>
