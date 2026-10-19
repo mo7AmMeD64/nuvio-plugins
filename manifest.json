@@ -1,6 +1,6 @@
 {
   "name": "mo7AmMeD64's Nuvio Plugins",
-  "version": "1.3",
+  "version": "1.4",
   "scrapers": [
     {
       "id": "cinemabox",
@@ -85,6 +85,27 @@
       "logo": "https://www.google.com/s2/favicons?domain=cima-cloud.com&sz=256",
       "contentLanguage": [
         "ar"
+      ]
+    },
+    {
+      "id": "anim3rb",
+      "name": "Anime3rb",
+      "description": "Anime3rb (anime3rb.com) — Arabic-sub anime: movies & series, direct MP4 1080p/720p/480p via vid3rb (~5-10s)",
+      "version": "1.0",
+      "author": "mo7AmMeD64",
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
+      "filename": "providers/anim3rb.js",
+      "enabled": true,
+      "formats": [
+        "mp4"
+      ],
+      "logo": "https://www.google.com/s2/favicons?domain=anime3rb.com&sz=256",
+      "contentLanguage": [
+        "ar",
+        "en"
       ]
     }
   ]

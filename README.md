@@ -19,6 +19,7 @@ Nuvio local scrapers (JavaScript) for the [Nuvio](https://github.com/nuvio-app/n
 | Oscar TV | Movies, Series & Anime (ostv-11-11.xyz) | 1080p / 720p / 480p / 360p HLS |
 | AnimeWitcher | Anime Movies & Series (animewitcher.com) — Arabic subs | 1080p / 720p / 480p MP4 |
 | Cima Cloud | Movies, Series & Anime (cima-cloud.com) — full Arabic catalog | 1080p / 720p / 480p HLS & MP4 |
+| Anime3rb | Anime Movies & Series (anime3rb.com) — Arabic subs | 1080p / 720p / 480p MP4 |
 
 
 <h2>support me </h2>
