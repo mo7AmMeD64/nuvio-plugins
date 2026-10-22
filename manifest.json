@@ -1,6 +1,5 @@
 {
-  "name": "mo7AmMeD64's Nuvio Plugins",
-  "version": "1.4",
+  "version": "1.6",
   "scrapers": [
     {
       "id": "cinemabox",
@@ -103,6 +102,28 @@
         "mp4"
       ],
       "logo": "https://www.google.com/s2/favicons?domain=anime3rb.com&sz=256",
+      "contentLanguage": [
+        "ar",
+        "en"
+      ]
+    },
+    {
+      "id": "akwam",
+      "name": "Akwam",
+      "description": "Akwam — Arabic content provider",
+      "version": "1.0",
+      "author": "mo7AmMeD64",
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
+      "filename": "providers/akwam.js",
+      "enabled": true,
+      "formats": [
+        "mp4",
+        "m3u8"
+      ],
+      "logo": "https://www.google.com/s2/favicons?domain=akwam.cx&sz=256",
       "contentLanguage": [
         "ar",
         "en"
