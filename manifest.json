@@ -1,6 +1,6 @@
 {
   "name": "mo7AmMeD64's Nuvio Plugins",
-  "version": "1.6",
+  "version": "1.7",
   "scrapers": [
     {
       "id": "cinemabox",
@@ -111,8 +111,8 @@
     {
       "id": "akwam",
       "name": "Akwam",
-      "description": "Akwam — Arabic content provider",
-      "version": "1.0",
+      "description": "Akwam (akwam.ss / ak.sv) — Arabic movies & series, direct MP4 480p-1080p, one page per season, automatic domain fallback (~5-8s)",
+      "version": "1.1",
       "author": "mo7AmMeD64",
       "supportedTypes": [
         "movie",
@@ -124,7 +124,7 @@
         "mp4",
         "m3u8"
       ],
-      "logo": "https://www.google.com/s2/favicons?domain=akwam.cx&sz=256",
+      "logo": "https://www.google.com/s2/favicons?domain=akwam.ss&sz=256",
       "contentLanguage": [
         "ar",
         "en"
