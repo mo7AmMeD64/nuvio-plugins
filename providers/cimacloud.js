@@ -784,7 +784,8 @@ async function getStreams(tmdbId, mediaType = "movie", seasonNum = null, episode
     }
     // Some servers answer with an HTML page or a 403 block instead of video; only links whose first bytes are a
     // playlist or a video file are returned.
-    const ok = await Promise.all(unique.map(playable));
+    // Each link gets 4s: one slow server must not hold back the whole list.
+    const ok = await Promise.all(unique.map((x) => Promise.race([playable(x), new Promise((r) => setTimeout(() => r(false), 4000))])));
     const streams = unique.filter((_, i) => ok[i]);
     log(`streams: ${streams.length} of ${unique.length} play`);
     return streams;
