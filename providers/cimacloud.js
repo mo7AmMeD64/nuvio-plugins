@@ -720,15 +720,13 @@ async function fetchServerLinks(path) {
 }
 
 // First bytes of the link, with the headers the player will send: an HLS playlist, MP4/MKV, MPEG-TS or WebM.
+// Only fetch and arrayBuffer are used: the app's plugin runtime has no TextDecoder.
 async function playable(stream) {
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 8000);
-    const res = await fetch(stream.url, { headers: { ...(stream.headers || {}), Range: "bytes=0-511" }, signal: controller.signal });
-    clearTimeout(timer);
+    const res = await fetch(stream.url, { headers: { ...(stream.headers || {}), Range: "bytes=0-511" } });
     if (res.status !== 200 && res.status !== 206) return false;
     const b = new Uint8Array(await res.arrayBuffer()).slice(0, 512);
-    const text = new TextDecoder().decode(b.slice(0, 16)).trimStart();
+    const text = String.fromCharCode.apply(null, Array.from(b.slice(0, 16))).trimStart();
     return text.startsWith("#EXTM3U") ||
       (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) ||    // ftyp (MP4)
       (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) ||    // Matroska / WebM

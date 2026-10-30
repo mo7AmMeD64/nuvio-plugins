@@ -70,7 +70,7 @@
       "id": "cimacloud",
       "name": "Cima Cloud",
       "description": "Cima Cloud (cima-cloud.com) — full Arabic catalog: movies, series & anime, HLS/MP4 via the app's own API with token attestation (~5-10s)",
-      "version": "1.1",
+      "version": "1.2",
       "author": "mo7AmMeD64",
       "supportedTypes": [
         "movie",
