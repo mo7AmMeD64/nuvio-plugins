@@ -300,9 +300,12 @@ function collectSeasons(page) {
 
 // episodes: div#series-episodes ... a[href*='/episode/']  (sorted by episode number)
 function parseEpisodes(root) {
-  const box = byId(root, "series-episodes");
+  const isEpisode = (n) => n.tag === "a" && /\/episode\//.test(n.attrs.href || "");
+  // Season pages carry two elements with id="series-episodes": the "other seasons" box (season buttons only)
+  // comes first, the episode list second. The one that holds episode links is used.
+  const box = all(root, (n) => n.attrs && n.attrs.id === "series-episodes").find((b) => first(b, isEpisode)) || null;
   const names = new Map();
-  for (const a of all(box || root, (n) => n.tag === "a" && /\/episode\//.test(n.attrs.href || ""))) {
+  for (const a of all(box || root, isEpisode)) {
     const path = pathOf(a.attrs.href);
     const h2 = first(a, (n) => n.tag === "h2");
     const list = names.get(path) || [];

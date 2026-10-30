@@ -719,6 +719,23 @@ async function fetchServerLinks(path) {
   return null;
 }
 
+// First bytes of the link, with the headers the player will send: an HLS playlist, MP4/MKV, MPEG-TS or WebM.
+// Only fetch and arrayBuffer are used: the app's plugin runtime has no TextDecoder.
+async function playable(stream) {
+  try {
+    const res = await fetch(stream.url, { headers: { ...(stream.headers || {}), Range: "bytes=0-511" } });
+    if (res.status !== 200 && res.status !== 206) return false;
+    const b = new Uint8Array(await res.arrayBuffer()).slice(0, 512);
+    const text = String.fromCharCode.apply(null, Array.from(b.slice(0, 16))).trimStart();
+    return text.startsWith("#EXTM3U") ||
+      (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) ||    // ftyp (MP4)
+      (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) ||    // Matroska / WebM
+      b[0] === 0x47;                                                          // MPEG-TS
+  } catch (_) {
+    return false;
+  }
+}
+
 async function getStreams(tmdbId, mediaType = "movie", seasonNum = null, episodeNum = null) {
   const isMovie = mediaType === "movie";
   const s = seasonNum || 1;
@@ -761,11 +778,16 @@ async function getStreams(tmdbId, mediaType = "movie", seasonNum = null, episode
     await Promise.all(links.map((link) => resolveServer(link, streamTitle, out).catch(() => false)));
 
     const seen = new Set();
-    const streams = [];
+    const unique = [];
     for (const x of out) {
-      if (x.url && !seen.has(x.url)) { seen.add(x.url); streams.push(x); }
+      if (x.url && !seen.has(x.url)) { seen.add(x.url); unique.push(x); }
     }
-    log(`streams: ${streams.length}`);
+    // Some servers answer with an HTML page or a 403 block instead of video; only links whose first bytes are a
+    // playlist or a video file are returned.
+    // Each link gets 4s: one slow server must not hold back the whole list.
+    const ok = await Promise.all(unique.map((x) => Promise.race([playable(x), new Promise((r) => setTimeout(() => r(false), 4000))])));
+    const streams = unique.filter((_, i) => ok[i]);
+    log(`streams: ${streams.length} of ${unique.length} play`);
     return streams;
   } catch (err) {
     log(`error: ${err && err.message}`);
