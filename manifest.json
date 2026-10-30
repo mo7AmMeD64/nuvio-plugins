@@ -49,7 +49,7 @@
       "id": "animewitcher",
       "name": "AnimeWitcher",
       "description": "AnimeWitcher (animewitcher.com) — anime movies & series, direct MP4 480p-1080p via MediaFire/PixelDrain (~5-8s)",
-      "version": "1.0",
+      "version": "1.1",
       "author": "Abodabodd",
       "supportedTypes": [
         "movie",
