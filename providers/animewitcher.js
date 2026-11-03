@@ -55,15 +55,9 @@ async function tmdbTitles(tmdbId, mediaType) {
   const d = await res.json();
   const main = d.name || d.title || "";
   const alt = ((d.alternative_titles || {}).results || []).map(t => t.title);
-  // Anime = TMDB's Animation genre (16) made in Japan, China or Korea. Without this check a live-action title whose
-  // name resembles an anime got that anime's links.
-  const animation = (d.genres || []).some(g => g.id === 16);
-  const asian = ["ja", "zh", "ko"].includes(d.original_language) ||
-    [...(d.origin_country || []), ...((d.production_countries || []).map(c => c.iso_3166_1))].some(c => ["JP", "CN", "KR"].includes(c));
   return {
     titles: [main, ...alt].filter(Boolean),
     year: (d.first_air_date || d.release_date || "").split("-")[0] || null,
-    isAnime: animation && asian,
   };
 }
 
@@ -280,9 +274,8 @@ async function getStreams(tmdbId, mediaType = "movie", seasonNum = null, episode
   log(`tmdb=${tmdbId} type=${mediaType}${isMovie ? "" : ` S${s}E${e}`}`);
 
   try {
-    const { titles, year, isAnime } = await tmdbTitles(tmdbId, mediaType);
+    const { titles, year } = await tmdbTitles(tmdbId, mediaType);
     if (!titles.length) return [];
-    if (!isAnime) { log("not anime on TMDB, skipped"); return []; }
     const wantType = isMovie ? TYPE_MOVIE : TYPE_SERIES;
     const yearOf = h => parseInt(h.details?.year || "0", 10) || 0;
     const yearOk = h => !yearOf(h) || yearOf(h) <= 1900 || !year || Math.abs(yearOf(h) - year) <= 1;
