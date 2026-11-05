@@ -21,6 +21,8 @@ Nuvio local scrapers (JavaScript) for the [Nuvio](https://github.com/nuvio-app/n
 | Cima Cloud | Movies, Series & Anime (cima-cloud.com) — full Arabic catalog | 1080p / 720p / 480p HLS & MP4 |
 | Anime3rb | Anime Movies & Series (anime3rb.com) — Arabic subs | 1080p / 720p / 480p MP4 |
 | Akwam | Movies & Series (akwam.ss / ak.sv) — Arabic content | 1080p / 720p / 480p MP4 |
+| Cinemana | Movies & Series (cinemana.shabakaty.cc) — Arabic subs, Iraq only | MP4 / HLS |
+| Cee | Movies & Series (cee.buzz) — Arabic subs, Iraq only | MP4 / HLS |
 
 
 <h2>support me </h2>

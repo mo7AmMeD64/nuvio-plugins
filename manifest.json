@@ -1,6 +1,6 @@
 {
   "name": "mo7AmMeD64's Nuvio Plugins",
-  "version": "1.7",
+  "version": "1.8",
   "scrapers": [
     {
       "id": "cinemabox",
@@ -129,6 +129,50 @@
         "ar",
         "en"
       ]
+    },
+    {
+      "id": "cinemana",
+      "name": "Cinemana",
+      "description": "Shabakaty Cinemana: films and series with Arabic subtitles. Works inside Iraq only.",
+      "version": "1.0.2",
+      "author": "CinemaHome",
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
+      "filename": "providers/cinemana.js",
+      "enabled": true,
+      "formats": [
+        "mp4",
+        "m3u8"
+      ],
+      "contentLanguage": [
+        "ar",
+        "en"
+      ],
+      "logo": "https://www.google.com/s2/favicons?domain=cinemana.shabakaty.cc&sz=256"
+    },
+    {
+      "id": "cee",
+      "name": "Cee",
+      "description": "Cee (cee.buzz): films and series with Arabic subtitles. Works inside Iraq only.",
+      "version": "1.0.2",
+      "author": "CinemaHome",
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
+      "filename": "providers/cee.js",
+      "enabled": true,
+      "formats": [
+        "mp4",
+        "m3u8"
+      ],
+      "contentLanguage": [
+        "ar",
+        "en"
+      ],
+      "logo": "https://www.google.com/s2/favicons?domain=cee.buzz&sz=256"
     }
   ]
 }
